@@ -449,10 +449,11 @@ function analyzeQuote(text,filename){
     dwelling:null,homePay1:null
   };
   if(isHomeBundle){
-    // Mirvat Home rule: Standard coverage option and $5,000 All Perils deductible.
+    // Mirvat Home rule: Special limits must be Standard and the
+    // All Perils deductible must be $5,000.
     // Replacement Cost selections are not QC requirements for this agency.
-    homeData.coverageStandardOk=/Coverage\s+option\s+Standard/i.test(t);
-    if(!homeData.coverageStandardOk) errors.push('Home: Coverage option must be Standard');
+    homeData.coverageStandardOk=/Special\s+limits[\s\S]{0,80}?\bStandard\b/i.test(t);
+    if(!homeData.coverageStandardOk) errors.push('Home: Special limits must be Standard');
     homeData.allPerilsOk=/Deductibles?[\s\S]{0,160}?All\s+perils\s+\$5,?000(?:\.00)?\b/i.test(t);
     if(!homeData.allPerilsOk) errors.push('Home: All perils deductible must be $5,000');
 
@@ -1044,8 +1045,8 @@ function buildHomePanel(r){
         ?'<div class="check-item"><span class="ci-icon ci-ok">✓</span><span class="ci-label">Personal Property</span><span class="ci-val ok">$10,000</span></div>'
         :'<div class="check-item"><span class="ci-icon ci-fail">✗</span><span class="ci-label">Personal Property</span><span class="ci-val bad">Must be $10,000</span></div>')
       :(h.coverageStandardOk
-        ?'<div class="check-item"><span class="ci-icon ci-ok">✓</span><span class="ci-label">Coverage Option</span><span class="ci-val ok">Standard</span></div>'
-        :'<div class="check-item"><span class="ci-icon ci-fail">✗</span><span class="ci-label">Coverage Option</span><span class="ci-val bad">Must be Standard</span></div>'))
+        ?'<div class="check-item"><span class="ci-icon ci-ok">✓</span><span class="ci-label">Special Limits</span><span class="ci-val ok">Standard</span></div>'
+        :'<div class="check-item"><span class="ci-icon ci-fail">✗</span><span class="ci-label">Special Limits</span><span class="ci-val bad">Must be Standard</span></div>'))
     +(h.allPerilsOk
       ?'<div class="check-item"><span class="ci-icon ci-ok">✓</span><span class="ci-label">All Perils Deductible</span><span class="ci-val ok">'+(isRenters?'$1,000':'$5,000')+'</span></div>'
       :'<div class="check-item"><span class="ci-icon ci-fail">✗</span><span class="ci-label">All Perils Deductible</span><span class="ci-val bad">Must be '+(isRenters?'$1,000':'$5,000')+'</span></div>')
