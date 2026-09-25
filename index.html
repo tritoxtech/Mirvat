@@ -446,8 +446,16 @@ function analyzeQuote(text,filename){
   let homeData={
     isBundle,isHomeBundle,isRentersBundle,
     coverageStandardOk:true,allPerilsOk:true,rentersPersonalPropertyOk:true,
+    fireProtectionOk:true,theftProtectionOk:true,
     dwelling:null,homePay1:null
   };
+  if(isBundle){
+    homeData.fireProtectionOk=/\bFire\s+protection\b/i.test(t);
+    homeData.theftProtectionOk=/\bTheft\s+protection\b/i.test(t);
+    const propertyLabel=isRentersBundle?'Renters':'Home';
+    if(!homeData.fireProtectionOk) errors.push(`${propertyLabel}: Fire protection discount is MISSING`);
+    if(!homeData.theftProtectionOk) errors.push(`${propertyLabel}: Theft protection discount is MISSING`);
+  }
   if(isHomeBundle){
     // Mirvat Home rule: Special limits must be Standard and the
     // All Perils deductible must be $5,000.
@@ -866,7 +874,9 @@ function checkVehicleCoverage(t,vehicles,errors){
       const premiumLineEnd=vehSection.indexOf('\n',premiumIndex);
       if(premiumLineEnd>=0) vehSection=vehSection.substring(0,premiumLineEnd);
     }
-    const hasRoadside=/Roadside\s+assistance/i.test(vehSection);
+    const roadsideMatch=vehSection.match(/Roadside\s+assistance\b([\s\S]{0,80})/i);
+    const hasRoadside=!!roadsideMatch;
+    const roadsideEnhanced=hasRoadside&&/\bEnhanced\b/i.test(roadsideMatch[1]);
 
     if(yr>=2016){
       if(!hasComp) errors.push(`${short}: Missing Comprehensive (2016+ = Full Coverage)`);
@@ -877,7 +887,8 @@ function checkVehicleCoverage(t,vehicles,errors){
       if(hasComp) errors.push(`${short}: Has Comprehensive — 2015 and older must be PLPD only`);
       if(hasColl) errors.push(`${short}: Has Collision — 2015 and older must be PLPD only`);
     }
-    if(!hasRoadside) errors.push(`${short}: Roadside Assistance is missing`);
+    if(!hasRoadside) errors.push(`${short}: Roadside Assistance is missing — must be Enhanced`);
+    else if(!roadsideEnhanced) errors.push(`${short}: Roadside Assistance must be Enhanced`);
   }
 }
 
@@ -962,7 +973,7 @@ function buildDetails(r){
       <div style="margin-top:5px;display:flex;flex-wrap:wrap;gap:4px;">
         <span class="${cErr?'v-fail':'v-ok'}">${isNew?(cErr?'✗ Comp missing':'✓ Comp $1,000'):'✓ No Comp'}</span>
         <span class="${colErr?'v-fail':'v-ok'}">${isNew?(colErr?'✗ Collision missing':'✓ Collision $1,000'):'✓ No Collision'}</span>
-        <span class="${rErr?'v-fail':'v-ok'}">${rErr?'✗ No Roadside':'✓ Roadside'}</span>
+        <span class="${rErr?'v-fail':'v-ok'}">${rErr?'✗ Roadside not Enhanced':'✓ Roadside Enhanced'}</span>
       </div>
     </div>`;
   }
@@ -1050,6 +1061,12 @@ function buildHomePanel(r){
     +(h.allPerilsOk
       ?'<div class="check-item"><span class="ci-icon ci-ok">✓</span><span class="ci-label">All Perils Deductible</span><span class="ci-val ok">'+(isRenters?'$1,000':'$5,000')+'</span></div>'
       :'<div class="check-item"><span class="ci-icon ci-fail">✗</span><span class="ci-label">All Perils Deductible</span><span class="ci-val bad">Must be '+(isRenters?'$1,000':'$5,000')+'</span></div>')
+    +(h.fireProtectionOk
+      ?'<div class="check-item"><span class="ci-icon ci-ok">✓</span><span class="ci-label">Fire Protection Discount</span><span class="ci-val ok">Included</span></div>'
+      :'<div class="check-item"><span class="ci-icon ci-fail">✗</span><span class="ci-label">Fire Protection Discount</span><span class="ci-val bad">Missing</span></div>')
+    +(h.theftProtectionOk
+      ?'<div class="check-item"><span class="ci-icon ci-ok">✓</span><span class="ci-label">Theft Protection Discount</span><span class="ci-val ok">Included</span></div>'
+      :'<div class="check-item"><span class="ci-icon ci-fail">✗</span><span class="ci-label">Theft Protection Discount</span><span class="ci-val bad">Missing</span></div>')
     +(h.dwelling?'<div class="check-item"><span class="ci-icon ci-ok">✓</span><span class="ci-label">Dwelling (Cov A)</span><span class="ci-val neutral">$'+h.dwelling.toLocaleString()+'</span></div>':'')
     +'</div></div>';
 }
