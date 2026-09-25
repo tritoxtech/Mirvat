@@ -766,7 +766,7 @@ function checkFarmers(t,errors,warnings,vehicles){
   }else if(!/Auto\/Home\s+or\s+Condo/i.test(t)){
     errors.push('Farmers Home: Auto/Home or Condo discount is MISSING');
   }
-  checkVehicleCoverage(t,vehicles,errors);
+  checkVehicleCoverage(t,vehicles,errors,'Enhanced');
 }
 
 // ── TYPE 2: FARMER-BRISTOL ──
@@ -774,7 +774,7 @@ function checkFarmerBristol(t,errors,warnings,vehicles){
   checkLiabilityPIP(t,errors);
   if(/Signal\s+by\s+Farmers/i.test(t)) errors.push('Signal by Farmers must be REMOVED');
   if(!/Auto\/Farmers\s+Home/i.test(t)) errors.push('Farmer-Bristol: Auto/Farmers Home discount is MISSING');
-  checkVehicleCoverage(t,vehicles,errors);
+  checkVehicleCoverage(t,vehicles,errors,'Yes');
 }
 
 // ── TYPE 3: PURE BRISTOL WEST ──
@@ -796,12 +796,12 @@ function checkPureBristol(t,errors,warnings,vehicles){
   for(const f of forbidden){
     if(f.rx.test(discText)) errors.push(`Bristol West: "${f.name}" should NOT be checked`);
   }
-  checkVehicleCoverage(t,vehicles,errors);
+  checkVehicleCoverage(t,vehicles,errors,'Yes');
 }
 
 // ── VEHICLE COVERAGE CHECK ──
 // Uses summary page values (compVal/collVal) extracted with vehicle
-function checkVehicleCoverage(t,vehicles,errors){
+function checkVehicleCoverage(t,vehicles,errors,roadsideRequired){
   const tUp=t.toUpperCase();
 
   // Locate the most likely detailed coverage heading for each vehicle. A quote can
@@ -876,7 +876,9 @@ function checkVehicleCoverage(t,vehicles,errors){
     }
     const roadsideMatch=vehSection.match(/Roadside\s+assistance\b([\s\S]{0,80})/i);
     const hasRoadside=!!roadsideMatch;
-    const roadsideEnhanced=hasRoadside&&/\bEnhanced\b/i.test(roadsideMatch[1]);
+    const roadsideOk=hasRoadside&&(roadsideRequired==='Yes'
+      ?/\bYes\b/i.test(roadsideMatch[1])
+      :/\bEnhanced\b/i.test(roadsideMatch[1]));
 
     if(yr>=2016){
       if(!hasComp) errors.push(`${short}: Missing Comprehensive (2016+ = Full Coverage)`);
@@ -887,8 +889,8 @@ function checkVehicleCoverage(t,vehicles,errors){
       if(hasComp) errors.push(`${short}: Has Comprehensive — 2015 and older must be PLPD only`);
       if(hasColl) errors.push(`${short}: Has Collision — 2015 and older must be PLPD only`);
     }
-    if(!hasRoadside) errors.push(`${short}: Roadside Assistance is missing — must be Enhanced`);
-    else if(!roadsideEnhanced) errors.push(`${short}: Roadside Assistance must be Enhanced`);
+    if(!hasRoadside) errors.push(`${short}: Roadside Assistance is missing — must be ${roadsideRequired}`);
+    else if(!roadsideOk) errors.push(`${short}: Roadside Assistance must be ${roadsideRequired}`);
   }
 }
 
@@ -961,6 +963,7 @@ function buildDetails(r){
   let vHTML='';
   for(const v of r.vehicles){
     const isNew=v.year>=2016;
+    const roadsideRequired=r.quoteType==='Farmers'?'Enhanced':'Yes';
     // Use both year AND partial model name to match errors correctly (avoids same-year collision)
     const shortModel=v.model.split(' ').slice(0,3).join(' ');
     const vKey=`${v.year} ${shortModel}`.toLowerCase();
@@ -973,7 +976,7 @@ function buildDetails(r){
       <div style="margin-top:5px;display:flex;flex-wrap:wrap;gap:4px;">
         <span class="${cErr?'v-fail':'v-ok'}">${isNew?(cErr?'✗ Comp missing':'✓ Comp $1,000'):'✓ No Comp'}</span>
         <span class="${colErr?'v-fail':'v-ok'}">${isNew?(colErr?'✗ Collision missing':'✓ Collision $1,000'):'✓ No Collision'}</span>
-        <span class="${rErr?'v-fail':'v-ok'}">${rErr?'✗ Roadside not Enhanced':'✓ Roadside Enhanced'}</span>
+        <span class="${rErr?'v-fail':'v-ok'}">${rErr?'✗ Roadside not '+roadsideRequired:'✓ Roadside '+roadsideRequired}</span>
       </div>
     </div>`;
   }
